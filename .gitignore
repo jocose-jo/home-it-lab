@@ -1,0 +1,17 @@
+# Never commit disk images or VM files
+*.iso
+*.vhd
+*.vhdx
+*.avhdx
+*.vmcx
+*.vmrs
+*.vmgs
+
+# Secrets and local notes
+*.secret
+*.key
+.env
+
+# OS clutter
+Thumbs.db
+desktop.ini
