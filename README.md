@@ -72,6 +72,10 @@ No passwords are stored in any script. The DSRM password is prompted for at runt
 
 ![DNS SRV record](screenshots/01-dns-srv-record.png)
 
+**DHCP address pool.** The LabNet scope hands out 10.0.50.100-10.0.50.200. The green check on IPv4 shows the server is authorized in Active Directory.
+
+![DHCP address pool](screenshots/02-dhcp-address-pool.png)
+
 **DHCP scope options.** Clients get router 10.0.50.1, DNS server 10.0.50.10 and domain `lab.internal`, so every domain machine uses the DC for DNS automatically.
 
 ![DHCP scope options](screenshots/02-dhcp-scope-options.png)
