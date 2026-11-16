@@ -4,6 +4,65 @@ Problems hit while building the lab: symptom, cause, fix, and what I took away f
 
 ---
 
+## Client gets a 169.254.x.x (APIPA) address
+
+**Phase:** 1, first boot of the Windows 11 client (CL01)
+
+**Symptom:** `ipconfig /all` on CL01 showed:
+
+```
+DHCP Enabled. . . . . . . . . . . : Yes
+Autoconfiguration IPv4 Address. . : 169.254.77.30(Preferred)
+Subnet Mask . . . . . . . . . . . : 255.255.0.0
+Default Gateway . . . . . . . . . :
+DNS Servers . . . . . . . . . . . : fec0:0:0:ffff::1%1
+```
+
+**What it means:** The client sent a DHCP request and got no reply, so Windows assigned itself an Automatic Private IP Addressing (APIPA) address. The `fec0:0:0:ffff::` DNS entries are Windows' default placeholders when no DNS server has been configured. Together they point to a problem between the client and the DHCP server, not on the client itself.
+
+**How I narrowed it down:**
+
+```powershell
+# Host: both VMs running and on the LabNet switch?
+Get-VM DC01, CL01 | Select-Object Name, State
+Get-VMNetworkAdapter -VMName DC01, CL01 | Select-Object VMName, SwitchName, Status
+
+# DC01: DHCP service running, authorized, scope active, bound to the lab NIC?
+Get-Service dhcpserver
+Get-DhcpServerInDC
+Get-DhcpServerv4Scope
+Get-DhcpServerv4Binding
+```
+
+**Cause:** DC01, the lab's only DHCP server, had turned off, so nothing was answering DHCP requests on LabNet.
+
+**Fix:** Started DC01 (`Start-VM DC01`), waited for it to finish booting, then ran `ipconfig /release` and `ipconfig /renew` on CL01. The client got a lease from the 10.0.50.100-200 scope, with DNS 10.0.50.10 and the `lab.internal` suffix.
+
+**Prevention:** DC01 is now set to start automatically with the host, and CL01 starts two minutes later, so the DC is up before the client asks for an address (`00-host-setup.ps1` and `04-create-client-vm.ps1`).
+
+**Takeaway:** A 169.254 address means "no DHCP answer." Check the path in order: is the DHCP server running, can the client reach it, is the server authorized and serving the scope. Here the first check found it. In a one-DC network, the DC is a single point of failure for DHCP and DNS, which is why production networks run at least two. `05-join-domain.ps1` now stops with this explanation if it sees an APIPA address.
+
+---
+
+## `Move-Item` fails with "Could not find a part of the path"
+
+**Phase:** 1, moving the Windows 11 ISO into `C:\ISOs`
+
+**Symptom:**
+
+```
+Move-Item : Could not find a part of the path.
+CategoryInfo : WriteError: (...) [Move-Item], DirectoryNotFoundException
+```
+
+**Cause:** The source ISO existed, but the destination folder `C:\ISOs` didn't. `Move-Item` won't create missing folders. The `WriteError` category was the clue: PowerShell had found the file and failed while writing to the destination.
+
+**Fix:** `New-Item -ItemType Directory -Path "C:\ISOs" -Force`, then reran the move.
+
+**Takeaway:** "Path not found" can mean either end of a copy or move. The error category tells you which.
+
+---
+
 ## `dcdiag` fails the DFSREvent test right after promotion
 
 **Phase:** 1, after promoting DC01 to a domain controller

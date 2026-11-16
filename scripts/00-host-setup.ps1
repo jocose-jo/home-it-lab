@@ -78,6 +78,8 @@ if (-not (Get-VM -Name $VmName -ErrorAction SilentlyContinue)) {
 Set-VMProcessor -VMName $VmName -Count $CpuCount
 Set-VMMemory    -VMName $VmName -DynamicMemoryEnabled $false   # fixed RAM for a domain controller
 Set-VM          -Name   $VmName -AutomaticCheckpointsEnabled $false
+# The DC provides DHCP and DNS for the whole lab, so it starts first, with the host.
+Set-VM          -Name   $VmName -AutomaticStartAction Start -AutomaticStartDelay 0 -AutomaticStopAction ShutDown
 
 if (-not (Get-VMDvdDrive -VMName $VmName)) {
     Add-VMDvdDrive -VMName $VmName -Path $IsoPath
