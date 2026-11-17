@@ -44,7 +44,10 @@ The lab runs on an isolated Hyper-V internal switch with NAT. VMs get internet a
 - [x] Installed and authorized DHCP, with a scope and options for router, DNS and domain
 - [x] Built a Windows 11 client (virtual TPM, Secure Boot) that gets its address and DNS from the DC's DHCP scope
 - [x] Joined CL01 to the domain and verified it with `ipconfig /all`, `nslookup`, `nltest /sc_verify` and `gpresult /r`
-- [ ] Create OUs, users and security groups; practice resets, unlocks and disabling accounts
+- [x] Built an OU structure (department user OUs, Workstations, Groups, Admins, Departed) and moved CL01 into Workstations
+- [x] Created security groups and users; separated everyday and admin accounts
+- [x] Delegated password reset and unlock rights to a help desk group (least privilege), then tested it from CL01
+- [x] Worked account tickets: password reset with forced change, lockout investigation (event 4740) and unlock, offboarding disable
 - [ ] Build and troubleshoot GPOs (password/lockout, mapped drive, wallpaper, USB restriction)
 - [ ] Automate onboarding and offboarding with PowerShell (CSV bulk-create, disable, move to a Departed OU)
 
@@ -66,6 +69,8 @@ Run in order. Each script checks what already exists, so it's safe to rerun afte
 | [`03-configure-dns-dhcp.ps1`](scripts/03-configure-dns-dhcp.ps1) | DC01 | DNS client, forwarders and reverse zone; installs, authorizes and scopes DHCP |
 | [`04-create-client-vm.ps1`](scripts/04-create-client-vm.ps1) | Host | Creates the CL01 Windows 11 VM with a virtual TPM on LabNet |
 | [`05-join-domain.ps1`](scripts/05-join-domain.ps1) | CL01 | Checks the DHCP lease, DNS, SRV record and LDAP, then renames and joins the domain |
+| [`06-create-ous-groups-users.ps1`](scripts/06-create-ous-groups-users.ps1) | DC01 | OUs, security groups, sample users, admin account, help desk delegation, lockout policy |
+| [`Get-LockoutSource.ps1`](scripts/Get-LockoutSource.ps1) | DC01 | Help desk tool: lists locked accounts and the caller computer from event 4740; optional unlock |
 | [`verify-dc.ps1`](scripts/verify-dc.ps1) | DC01 | Pass/fail health check for services, DNS records, SYSVOL and DHCP |
 
 No passwords are stored in any script. The DSRM password is prompted for at runtime.
@@ -103,6 +108,22 @@ No passwords are stored in any script. The DSRM password is prompted for at runt
 **Domain computers.** CL01's computer account in Active Directory after the join.
 
 ![ADUC computers](screenshots/07-aduc-computers.png)
+
+**OU structure.** Users sorted into department OUs, with separate OUs for workstations, groups, admin accounts and departed staff. CL01 now sits in Workstations, where GPOs can be linked to it.
+
+![OU structure](screenshots/08-ou-structure.png)
+
+**Lockout investigation.** Kevin's account is locked after 5 bad attempts; `Search-ADAccount`, his bad-logon details and event 4740 on the DC, then the unlock.
+
+![Lockout and event 4740](screenshots/09-lockout-4740.png)
+
+**Least privilege in action.** Signed in to CL01 as help desk tech Daniel, the unlock succeeds, but adding himself to Domain Admins is refused with "Insufficient access rights."
+
+![Delegation test](screenshots/10-delegation-denied.png)
+
+**Offboarding.** Priya's account is disabled, stamped with the date in its description, removed from her groups and moved to the Departed OU.
+
+![Departed user](screenshots/11-departed-user.png)
 
 ## Troubleshooting log
 

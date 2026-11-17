@@ -4,6 +4,46 @@ Problems hit while building the lab: symptom, cause, fix, and what I took away f
 
 ---
 
+## `Unlock-ADAccount` not recognized when signed in as the help desk user
+
+**Phase:** 1, testing help desk delegation from CL01 as `LAB\dbrooks`
+
+**Symptom:** `Unlock-ADAccount knguyen` failed with "The term 'Unlock-ADAccount' is not recognized as the name of a cmdlet."
+
+**Cause:** The Active Directory PowerShell module is part of RSAT, which isn't installed on Windows 11 by default. Daniel is a standard user, so he can't install Windows capabilities himself.
+
+**Fix:** Signed in to CL01 as the admin account (`LAB\jgutierrez-adm`) and installed RSAT from an elevated prompt:
+
+```powershell
+Add-WindowsCapability -Online -Name Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0
+Get-Module -ListAvailable ActiveDirectory
+```
+
+Then signed back in as Daniel: the unlock succeeded, and adding himself to Domain Admins was refused with "Insufficient access rights."
+
+**Takeaway:** "Command not recognized" means a missing module, not missing permissions; "Insufficient access rights" is the permissions error. Telling the two apart saves time. Admin tools go on the workstation through an admin account, and the help desk account only gets the AD rights it was delegated.
+
+---
+
+## Event 4740 shows the DC instead of the locked user
+
+**Phase:** 1, investigating Kevin's lockout
+
+**Symptom:** Searching the 4740 event message for "Account Name" and "Caller Computer" returned `Account Name: DC01$...` and cut off before the useful part.
+
+**Cause:** A 4740 message contains two "Account Name" lines. The first belongs to the account that *recorded* the event (the DC's computer account, `DC01$`). The locked user and the caller computer come later, and the table view truncated them.
+
+**Fix:** Read the event's fields directly instead of searching its text. This is now [`Get-LockoutSource.ps1`](../scripts/Get-LockoutSource.ps1):
+
+```powershell
+Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4740} -MaxEvents 5 |
+  ForEach-Object { [pscustomobject]@{ Time=$_.TimeCreated; User=$_.Properties[0].Value; CallerComputer=$_.Properties[1].Value } }
+```
+
+**Takeaway:** The caller computer is what makes a lockout ticket solvable: repeat lockouts usually trace back to a saved old password on that machine.
+
+---
+
 ## Client gets a 169.254.x.x (APIPA) address
 
 **Phase:** 1, first boot of the Windows 11 client (CL01)
