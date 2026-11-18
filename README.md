@@ -48,7 +48,9 @@ The lab runs on an isolated Hyper-V internal switch with NAT. VMs get internet a
 - [x] Created security groups and users; separated everyday and admin accounts
 - [x] Delegated password reset and unlock rights to a help desk group (least privilege), then tested it from CL01
 - [x] Worked account tickets: password reset with forced change, lockout investigation (event 4740) and unlock, offboarding disable
-- [ ] Build and troubleshoot GPOs (password/lockout, mapped drive, wallpaper, USB restriction)
+- [x] Domain password and lockout policy, plus a fine-grained password policy (14 characters, 3-attempt lockout) for Domain Admins
+- [x] Built and linked GPOs: desktop wallpaper, S: drive for Sales (Group Policy Preferences with item-level targeting), removable storage block
+- [x] Troubleshot a security-filtered GPO that stopped applying (MS16-072) using `gpresult`, and fixed its permissions
 - [ ] Automate onboarding and offboarding with PowerShell (CSV bulk-create, disable, move to a Departed OU)
 
 ### Later phases
@@ -70,6 +72,7 @@ Run in order. Each script checks what already exists, so it's safe to rerun afte
 | [`04-create-client-vm.ps1`](scripts/04-create-client-vm.ps1) | Host | Creates the CL01 Windows 11 VM with a virtual TPM on LabNet |
 | [`05-join-domain.ps1`](scripts/05-join-domain.ps1) | CL01 | Checks the DHCP lease, DNS, SRV record and LDAP, then renames and joins the domain |
 | [`06-create-ous-groups-users.ps1`](scripts/06-create-ous-groups-users.ps1) | DC01 | OUs, security groups, sample users, admin account, help desk delegation, lockout policy |
+| [`07-group-policy.ps1`](scripts/07-group-policy.ps1) | DC01 | Admin password policy, wallpaper GPO (filtered to Sales), USB block, Sales share and S: drive GPO |
 | [`Get-LockoutSource.ps1`](scripts/Get-LockoutSource.ps1) | DC01 | Help desk tool: lists locked accounts and the caller computer from event 4740; optional unlock |
 | [`verify-dc.ps1`](scripts/verify-dc.ps1) | DC01 | Pass/fail health check for services, DNS records, SYSVOL and DHCP |
 
@@ -124,6 +127,29 @@ No passwords are stored in any script. The DSRM password is prompted for at runt
 **Offboarding.** Priya's account is disabled, stamped with the date in its description, removed from her groups and moved to the Departed OU.
 
 ![Departed user](screenshots/11-departed-user.png)
+
+### Group Policy
+
+**Where each GPO is linked.** User settings on Lab\Users, the USB restriction on Workstations, and password and lockout policy at the domain level, the only place Windows applies it to domain accounts. The wallpaper GPO's security filtering is limited to SG-Sales.
+
+![GPMC links](screenshots/12-gpmc-links.png)
+
+**Fine-grained password policy.** Domain Admins get a stricter policy (14 characters, 3-attempt lockout) than regular users, without changing the domain default.
+
+![Resultant password policy](screenshots/13-fgpp-resultant.png)
+
+**Mapped drive for Sales.** Maria, in SG-Sales, gets the S: drive through Group Policy Preferences with item-level targeting; non-Sales users don't.
+
+![Sales S drive](screenshots/14-sales-drive.png)
+
+**Removable storage blocked.** The policy value is present on CL01, and `gpresult` shows the Workstations GPO applied to the computer.
+
+![USB policy](screenshots/15-usb-policy.png)
+
+**Broken, then fixed.** After Authenticated Users was removed from the wallpaper GPO's security filtering, it stopped applying with `Not Applied (Unknown Reason)`, even though Maria is in SG-Sales. Granting Domain Computers read access fixed it.
+
+![GPO broken](screenshots/16-gpo-broken.png)
+![GPO fixed](screenshots/17-gpo-fixed.png)
 
 ## Troubleshooting log
 

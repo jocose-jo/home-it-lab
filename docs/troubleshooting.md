@@ -4,6 +4,57 @@ Problems hit while building the lab: symptom, cause, fix, and what I took away f
 
 ---
 
+## Security-filtered GPO stops applying: `Not Applied (Unknown Reason)`
+
+**Phase:** 1, restricting the wallpaper GPO to the Sales group
+
+**Symptom:** After changing the security filtering on "Users - Desktop Wallpaper" to SG-Sales and removing Authenticated Users, Maria (a member of SG-Sales) stopped getting the wallpaper. `gpresult /r` on CL01 listed it under filtered-out GPOs:
+
+```
+Users - Desktop Wallpaper
+    Filtering:  Not Applied (Unknown Reason)
+```
+
+**Cause:** Security update MS16-072 (KB3163622, June 2016) changed how user GPOs are downloaded: Windows now reads them using the **computer's** account, not the user's. Group Policy needs both Read (to fetch the GPO) and Apply (to process it). Authenticated Users had been granting CL01 its Read permission, because computers are authenticated users too. Removing it left SG-Sales able to apply the GPO, but CL01 unable to read it.
+
+**Fix:**
+
+```powershell
+Set-GPPermission -Name "Users - Desktop Wallpaper" -TargetName "Domain Computers" -TargetType Group -PermissionLevel GpoRead
+```
+
+After `gpupdate /force` on CL01, `gpresult /r` listed the GPO under Applied Group Policy Objects. The alternative fix is to leave Authenticated Users with Read but not Apply.
+
+**Takeaway:** When narrowing a user GPO's security filtering, keep Read for computers. `gpresult`'s "Unknown Reason" is vague, so knowing this pattern saves a lot of guessing. `07-group-policy.ps1` sets the permissions correctly.
+
+---
+
+## Standard user can't sign in: "you need the right to sign in through Remote Desktop Services"
+
+**Phase:** 1, signing in to CL01 as Maria to test Group Policy
+
+**Symptom:** Maria's sign-in was refused with a message about needing the right to sign in through Remote Desktop Services. Admin accounts could still sign in.
+
+**Cause:** The Hyper-V console had switched to **enhanced session mode**, which connects over Remote Desktop behind the scenes. Windows treated the sign-in as remote, and only Administrators and Remote Desktop Users may sign in remotely. Maria is a standard user, so nothing was wrong with her account.
+
+**Fix:** Turned off enhanced session (View menu in Virtual Machine Connection) so the console acts as the machine's local screen. To keep it off for all VMs: `Set-VMHost -EnableEnhancedSessionMode $false`. Adding users to Remote Desktop Users would also work, but it opens remote access the lab doesn't need.
+
+**Takeaway:** "The user can't sign in" isn't always an account problem. Check how they're connecting before resetting anything.
+
+---
+
+## Forgotten test-account password
+
+**Phase:** 1, returning to Maria's account to test Group Policy
+
+**Symptom:** Couldn't sign in as Maria; I no longer had the password I set at her forced change in step 3.
+
+**Fix:** Checked the account (`Get-ADUser mlopez -Properties LockedOut, BadLogonCount, PasswordLastSet`), unlocked it, and reset the password from DC01 with `Set-ADAccountPassword -Reset`, the same steps as a real reset ticket. Test-account passwords now live in my password manager.
+
+**Takeaway:** Check lockout status before resetting, and note that domain password history (24) blocks reusing recent passwords.
+
+---
+
 ## `Unlock-ADAccount` not recognized when signed in as the help desk user
 
 **Phase:** 1, testing help desk delegation from CL01 as `LAB\dbrooks`
