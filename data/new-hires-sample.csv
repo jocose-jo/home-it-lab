@@ -1,0 +1,6 @@
+EmployeeID,FirstName,LastName,Department,Title,Manager
+1001,Alex,Rivera,Sales,Sales Associate,mlopez
+1002,Sam,O'Brien,IT,Help Desk Technician,dbrooks
+1003,Jordan,Lee,HR,Recruiter,
+1004,Kim,Nguyen,Sales,Account Executive,mlopez
+1005,Chris,Patel,Marketing,Marketing Coordinator,

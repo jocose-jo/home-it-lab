@@ -73,6 +73,8 @@ Run in order. Each script checks what already exists, so it's safe to rerun afte
 | [`05-join-domain.ps1`](scripts/05-join-domain.ps1) | CL01 | Checks the DHCP lease, DNS, SRV record and LDAP, then renames and joins the domain |
 | [`06-create-ous-groups-users.ps1`](scripts/06-create-ous-groups-users.ps1) | DC01 | OUs, security groups, sample users, admin account, help desk delegation, lockout policy |
 | [`07-group-policy.ps1`](scripts/07-group-policy.ps1) | DC01 | Admin password policy, wallpaper GPO (filtered to Sales), USB block, Sales share and S: drive GPO |
+| [`08-onboard-users.ps1`](scripts/08-onboard-users.ps1) | DC01 | Onboarding from a CSV: department OU and group, unique username, manager, one-time password; `-WhatIf` and a log |
+| [`09-offboard-user.ps1`](scripts/09-offboard-user.ps1) | DC01 | Offboarding: disable, scramble password, log and remove groups, stamp ticket, move to Departed; refuses admin accounts |
 | [`Get-LockoutSource.ps1`](scripts/Get-LockoutSource.ps1) | DC01 | Help desk tool: lists locked accounts and the caller computer from event 4740; optional unlock |
 | [`verify-dc.ps1`](scripts/verify-dc.ps1) | DC01 | Pass/fail health check for services, DNS records, SYSVOL and DHCP |
 
