@@ -4,6 +4,32 @@ Problems hit while building the lab: symptom, cause, fix, and what I took away f
 
 ---
 
+## `Copy-VMFile` fails: "The operation was passed a parameter that was not valid"
+
+**Phase:** 1, copying the onboarding scripts from the host into DC01
+
+**Symptom:**
+
+```
+Copy-VMFile : Failed to copy file "...\scripts\08-onboard-users.ps1" to "C:\Scripts\" in the virtual machine.
+The operation was passed a parameter that was not valid.
+```
+
+**Cause:** Unlike `Copy-Item`, `Copy-VMFile` needs the full destination **file** path inside the VM. A folder path is rejected as an invalid parameter.
+
+**Fix:** Built the destination from the file name, and passed the source as a plain string:
+
+```powershell
+Copy-VMFile -Name DC01 -SourcePath (Resolve-Path $f).Path -DestinationPath "C:\Scripts\$(Split-Path $f -Leaf)" `
+  -FileSource Host -CreateFullPath -Force
+```
+
+Guest Services also has to be enabled for the VM first: `Enable-VMIntegrationService -VMName DC01 -Name "Guest Service Interface"`.
+
+**Takeaway:** A generic "parameter not valid" error usually means one argument is the wrong *shape*, here a folder where a file was expected. Check each argument against the cmdlet's documentation.
+
+---
+
 ## Security-filtered GPO stops applying: `Not Applied (Unknown Reason)`
 
 **Phase:** 1, restricting the wallpaper GPO to the Sales group

@@ -36,7 +36,7 @@ The lab runs on an isolated Hyper-V internal switch with NAT. VMs get internet a
 
 ## Progress
 
-### Phase 1: Windows Server domain
+### Phase 1: Windows Server domain (complete)
 - [x] Enabled Hyper-V and built an isolated NAT lab network
 - [x] Built DC01 and set its static IP, hostname and time zone
 - [x] Installed AD DS and created the `lab.internal` forest
@@ -51,7 +51,8 @@ The lab runs on an isolated Hyper-V internal switch with NAT. VMs get internet a
 - [x] Domain password and lockout policy, plus a fine-grained password policy (14 characters, 3-attempt lockout) for Domain Admins
 - [x] Built and linked GPOs: desktop wallpaper, S: drive for Sales (Group Policy Preferences with item-level targeting), removable storage block
 - [x] Troubleshot a security-filtered GPO that stopped applying (MS16-072) using `gpresult`, and fixed its permissions
-- [ ] Automate onboarding and offboarding with PowerShell (CSV bulk-create, disable, move to a Departed OU)
+- [x] Automated onboarding from a CSV (unique usernames, department OU and group, manager, one-time passwords, `-WhatIf`, logging)
+- [x] Automated offboarding (disable, scramble password, log and remove groups, ticket stamp, move to Departed, refuses privileged accounts)
 
 ### Later phases
 - [ ] Phase 2: Microsoft 365, Entra ID and Intune, and/or JumpCloud plus Google Workspace
@@ -152,6 +153,24 @@ No passwords are stored in any script. The DSRM password is prompted for at runt
 
 ![GPO broken](screenshots/16-gpo-broken.png)
 ![GPO fixed](screenshots/17-gpo-fixed.png)
+
+### Automation
+
+**Onboarding dry run.** `-WhatIf` previews every account without creating anything. The sample CSV tests three edge cases: an apostrophe (O'Brien), a username collision (a second `knguyen` becomes `knguyen2`), and an unknown department, which is reported as an error without stopping the run.
+
+![Onboarding WhatIf](screenshots/18-onboard-whatif.png)
+
+**Onboarding run.** Four accounts created in their department OUs and groups. One-time passwords are shown once on screen and never logged (cropped here). A second run skips everyone, because EmployeeID prevents duplicates.
+
+![Onboarding created](screenshots/19-onboard-created.png)
+
+**Offboarding.** A dry run, then the real run after confirmation: Jordan Lee disabled, removed from SG-HR, stamped with ticket INC-1001 and moved to Departed. The log records his groups first, so the change can be reversed.
+
+![Offboarding](screenshots/20-offboard.png)
+
+**Safety check.** The offboarding script refuses privileged accounts unless run with `-Force`.
+
+![Offboarding refused](screenshots/21-offboard-refused.png)
 
 ## Troubleshooting log
 
